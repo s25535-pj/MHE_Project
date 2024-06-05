@@ -55,18 +55,6 @@ build CMakeFiles/MHE_Project.dir/main.cpp.obj: CXX_COMPILER__MHE_Project_unscann
   OBJECT_DIR = CMakeFiles\MHE_Project.dir
   OBJECT_FILE_DIR = CMakeFiles\MHE_Project.dir
 
-build CMakeFiles/MHE_Project.dir/scoreFunctions.cpp.obj: CXX_COMPILER__MHE_Project_unscanned_Debug C$:/Users/oem/Desktop/Studia/MHE/MHE_Project/scoreFunctions.cpp || cmake_object_order_depends_target_MHE_Project
-  DEP_FILE = CMakeFiles\MHE_Project.dir\scoreFunctions.cpp.obj.d
-  FLAGS = -g -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles\MHE_Project.dir
-  OBJECT_FILE_DIR = CMakeFiles\MHE_Project.dir
-
-build CMakeFiles/MHE_Project.dir/Nonogram.cpp.obj: CXX_COMPILER__MHE_Project_unscanned_Debug C$:/Users/oem/Desktop/Studia/MHE/MHE_Project/Nonogram.cpp || cmake_object_order_depends_target_MHE_Project
-  DEP_FILE = CMakeFiles\MHE_Project.dir\Nonogram.cpp.obj.d
-  FLAGS = -g -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles\MHE_Project.dir
-  OBJECT_FILE_DIR = CMakeFiles\MHE_Project.dir
-
 
 # =============================================================================
 # Link build statements for EXECUTABLE target MHE_Project
@@ -75,7 +63,7 @@ build CMakeFiles/MHE_Project.dir/Nonogram.cpp.obj: CXX_COMPILER__MHE_Project_uns
 #############################################
 # Link the executable MHE_Project.exe
 
-build MHE_Project.exe: CXX_EXECUTABLE_LINKER__MHE_Project_Debug CMakeFiles/MHE_Project.dir/main.cpp.obj CMakeFiles/MHE_Project.dir/scoreFunctions.cpp.obj CMakeFiles/MHE_Project.dir/Nonogram.cpp.obj
+build MHE_Project.exe: CXX_EXECUTABLE_LINKER__MHE_Project_Debug CMakeFiles/MHE_Project.dir/main.cpp.obj
   FLAGS = -g
   LINK_LIBRARIES = -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = CMakeFiles\MHE_Project.dir
