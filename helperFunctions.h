@@ -5,10 +5,22 @@
 #include <vector>
 #include <algorithm>
 
+std::random_device rd;
+std::mt19937 randomGenerator(rd());
+
 struct Nonogram {
 public:
     int rating = 0;
     std::vector<std::vector<int>> board;
+
+    void printRating() {
+        std::cout << "Rating: " << rating << std::endl;
+    }
+
+//    bool operator==(const Nonogram& other) const {
+//        return board == other.board;
+//    }
+
 };
 
 struct Vector2d {
@@ -90,8 +102,8 @@ Vector2d readHintsFromBoard(Nonogram nonogram) {
     }
 
     // Y
-    for (int i = 0; i < nonogram.board.size(); i++) {
-        for (int j = 0; j < nonogram.board[i].size(); j++) {
+    for (int i = 0; i < nonogram.board[0].size(); i++) { // Małe machlojki by pętla działała
+        for (int j = 0; j < nonogram.board.size(); j++) {
             if (nonogram.board[j][i] == 1) {
                 blockLength++;
             } else {
@@ -172,6 +184,51 @@ std::vector<Nonogram> generateAllNonograms(const Vector2d& hints) {
         nonogramList.push_back(nonogram);
     }
     return nonogramList;
+}
+
+// Wygeneruj losową planszę gry o zadanym rozmiarze
+
+
+Nonogram generate_randomNonogram(int sizeX, int sizeY) {
+    Nonogram nonogram;
+    // Jak nie określałem rozmiaru wektora to miałem SEG faulty
+    std::vector<std::vector<int>> puzzle(sizeX, std::vector<int>(sizeY));
+    std::uniform_int_distribution<int> value(0,1);
+
+    for (int i = 0; i < sizeX; i++) {
+        for (int j = 0; j < sizeY; j++) {
+            puzzle[i][j] = value(randomGenerator);
+        }
+    }
+    nonogram.board = puzzle;
+    return nonogram;
+}
+
+Nonogram generate_zeroNonogram(int sizeX, int sizeY) {
+    Nonogram nonogram;
+    // Jak nie określałem rozmiaru wektora to miałem SEG faulty
+    std::vector<std::vector<int>> puzzle(sizeX, std::vector<int>(sizeY));
+
+    for (int i = 0; i < sizeX; i++) {
+        for (int j = 0; j < sizeY; j++) {
+            puzzle[i][j] = 0;
+        }
+    }
+    nonogram.board = puzzle;
+    return nonogram;
+}
+
+bool isInList(Nonogram nonogram, std::list<Nonogram> list) {
+    for (auto e : list) {
+//        printVector(nonogram.board);
+//        std::cout << "==" << std::endl;
+//        printVector(e.board);
+//        std::cout << std::endl;
+        if (nonogram.board == e.board) {
+            return true;
+        }
+    }
+    return false;
 }
 
 #endif //PROJECT2_HELPERFUNCTIONS_H

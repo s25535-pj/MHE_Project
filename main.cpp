@@ -2,6 +2,8 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <list>
+#include <set>
 #include "helperFunctions.h"
 
 // Wygeneruj planszę gry
@@ -13,9 +15,13 @@ Nonogram generate_puzzleManually() {
 //            {1, 0, 0, 0, 1},
 //            {0, 1, 1, 1, 0},
 //            {0, 0, 0, 1, 0}
+//            {1,0,1,1},
+//            {0,1,0,0},
+//            {1,1,0,1},
             {1,0,1},
             {0,1,0},
             {1,1,0},
+            {1,1,1}
     };
     nonogram.board = board;
     return nonogram;
@@ -30,9 +36,15 @@ Vector2d getHints() {
 //            {1,1},
 //            {3},
 //            {1}
+
+//            {1,2},
+//            {1},
+//            {2,1}
+
             {1,1},
             {1},
-            {2}
+            {2},
+            {3}
     };
     hints.y = {
 //            {3},
@@ -40,9 +52,15 @@ Vector2d getHints() {
 //            {1,1},
 //            {1,2},
 //            {1,1}
-            {1,1},
-            {2},
-            {1}
+
+//            {1,1},
+//            {2},
+//            {1},
+//            {1,1}
+
+            {1,2},
+            {3},
+            {1,1}
     };
 
     return hints;
@@ -53,13 +71,12 @@ int rateNonogramBasingOnHints(Nonogram nonogram, Vector2d hints) {
     int painted = 0;
     int blockLength = 0;
     std::vector<int> tmp;
-    auto board = nonogram.board;
 
     // X
     // Sprawdź wartości na zadanym indexie
-    for (int i = 0; i < board.size(); i++) {
-        for (int j = 0; j <board[i].size(); j++) {
-            if (board[i][j] == 1) {
+    for (int i = 0; i < nonogram.board.size(); i++) {
+        for (int j = 0; j < nonogram.board[i].size(); j++) {
+            if (nonogram.board[i][j] == 1) {
                 painted++;
                 blockLength++;
             } else {
@@ -73,9 +90,17 @@ int rateNonogramBasingOnHints(Nonogram nonogram, Vector2d hints) {
 //        std::cout << "rowSumX : " << hints.getXRowSum(i) << std::endl;
         if (blockLength > 0) tmp.push_back(blockLength);
 
+        int size = 0;
+        // Porównaj hinty i zaczytane z nonogramu bloki
         for (int j = 0; j < tmp.size(); j++) {
-            if(j <= hints.x[i].size()) {
-                if (tmp[j] != hints.x[i][j]) {
+            // Weź ten co jest mniejszy
+            if(j < hints.x[i].size()) {
+                size = j;
+            } else {
+                size = (int)hints.x[i].size();
+            }
+            for (int k = 0; k < size; k++) {
+                if (tmp[k] != hints.x[i][k]) {
                     rating -= 1; // - Za każdą złą liczbę na indexie
                 }
             }
@@ -86,12 +111,13 @@ int rateNonogramBasingOnHints(Nonogram nonogram, Vector2d hints) {
         blockLength = 0;
         painted = 0;
         tmp.clear();
+//        std::cout << "Rating X: " << rating << std::endl;
     }
 
     // Y
-    for (int i = 0; i < board.size(); i++) {
-        for (int j = 0; j <board[i].size(); j++) {
-            if (board[j][i] == 1) {
+    for (int i = 0; i < nonogram.board[0].size(); i++) {
+        for (int j = 0; j < nonogram.board.size(); j++) {
+            if (nonogram.board[j][i] == 1) {
                 painted++;
                 blockLength++;
             } else {
@@ -102,31 +128,39 @@ int rateNonogramBasingOnHints(Nonogram nonogram, Vector2d hints) {
         }
         // Odejmij różnicę zamalowanych pól od wyniku
 //        std::cout << "PaintedY: " << painted << std::endl;
-//        std::cout << "rowSumX : " << hints.getYRowSum(i) << std::endl;
+//        std::cout << "rowSumY : " << hints.getYRowSum(i) << std::endl;
         if (blockLength > 0) tmp.push_back(blockLength);
 
+        int size = 0;
+        // Porównaj hinty i zaczytane z nonogramu bloki
         for (int j = 0; j < tmp.size(); j++) {
-            if(j <= hints.y[i].size()) {
-                if (tmp[j] != hints.y[i][j]) {
+            // Weź ten co jest mniejszy
+            if(j < hints.y[i].size()) {
+                size = j;
+            } else {
+                size = (int)hints.y[i].size();
+            }
+
+            for (int k = 0; k < size; k++) {
+                if (tmp[k] != hints.y[i][k]) {
                     rating -= 1; // - Za każdą złą liczbę na indexie
                 }
             }
         }
+
         rating -= std::abs((int)hints.y[i].size() - (int)tmp.size()) * 2; // - za każdy brak liczby
         rating -= std::abs((int)hints.getYRowSum(i) - painted); // - za każde źle zamalowane
 
         blockLength = 0;
         painted = 0;
         tmp.clear();
+//        std::cout << "Rating Y: " << rating << std::endl;
     }
     return rating;
 }
 
-// Wygeneruj losową planszę gry o zadanym rozmiarze
-std::random_device rd;
-std::mt19937 randomGenerator(rd());
-
-Nonogram generate_randomSolution(Vector2d hints) {
+// Wygeneruj losową planszę gry na podstawie wskazówek
+Nonogram generate_randomSolution_rateIt(Vector2d hints) {
     Nonogram nonogram;
     // Jak nie określałem rozmiaru wektora to miałem SEG faulty
     std::vector<std::vector<int>> puzzle(hints.sizeX(), std::vector<int>(hints.sizeY()));
@@ -138,11 +172,12 @@ Nonogram generate_randomSolution(Vector2d hints) {
         }
     }
     nonogram.board = puzzle;
+    nonogram.rating = rateNonogramBasingOnHints(nonogram,hints);
     return nonogram;
 }
 
 // Utwórz nonogram sąsiadujący z dostarczonym
-Nonogram generate_randomNeighbor(Nonogram nonogram) {
+Nonogram generate_randomNeighbor_rateIt(Nonogram nonogram, Vector2d hints) {
     std::uniform_int_distribution<int> value(0,(int)nonogram.board.size()-1);
 
     int x = value(randomGenerator);
@@ -153,6 +188,7 @@ Nonogram generate_randomNeighbor(Nonogram nonogram) {
     } else {
         nonogram.board[x][y] = 0;
     }
+    nonogram.rating = rateNonogramBasingOnHints(nonogram, hints);
     return nonogram;
 }
 
@@ -175,6 +211,7 @@ std::vector<Nonogram> generate_allNeighbors(Nonogram nonogram) {
 
 // Algorytm pełnego przeglądu
 Nonogram solve_fullReview(const Vector2d& hints) {
+    Nonogram fake;
     int x = (int)hints.x.size();
     int y = (int)hints.y.size();
 
@@ -187,13 +224,13 @@ Nonogram solve_fullReview(const Vector2d& hints) {
         unsigned long long currentCombination = combination;
 
         // Zaczytywanie liczb do board
-        for (int i = 0; i < x * y; i++) {
-            int row = i / x; // int zaokrągla w dół
-            int col = i % y;
-
-            currentBoard[row][col] = (int)currentCombination & 1; // przepisz skrajnie prawy bit do komórki nonogramu.
-            currentCombination >>= 1; // przesuń wszytkie bity w prawo.
+        for (int i = 0; i < x; i++) {
+            for (int j = 0; j < y; j++) {
+                currentBoard[i][j] = (int)currentCombination & 1; // przepisz skrajnie prawy bit do komórki nonogramu.
+                currentCombination >>= 1; // przesuń wszytkie bity w prawo.
+            }
         }
+
         Nonogram nonogram;
         nonogram.board = currentBoard;
 
@@ -201,48 +238,91 @@ Nonogram solve_fullReview(const Vector2d& hints) {
             return nonogram;
         }
     }
+    std::cout << "You should never see this!";
 }
 
 // Algorytm wspinaczkowy z losowym sąsiadem
 Nonogram solve_hillClimbing_random(Vector2d hints, int stop) {
-    Nonogram currentSolution = generate_randomSolution(hints);
-    currentSolution.rating = rateNonogramBasingOnHints(currentSolution, hints);
+    Nonogram currentSolution = generate_randomSolution_rateIt(hints);
+    int currentStop = stop;
 
-    while(stop > 0) {
-        Nonogram randomNeighbor = generate_randomNeighbor(currentSolution);
-        randomNeighbor.rating = rateNonogramBasingOnHints(randomNeighbor, hints);
+    while(currentStop > 0 && currentSolution.rating < 0) {
+        Nonogram randomNeighbor = generate_randomNeighbor_rateIt(currentSolution, hints);
         if (currentSolution.rating < randomNeighbor.rating) {
-//            std::cout << std::endl;
-//            printVector(currentSolution.board);
             currentSolution = randomNeighbor;
-//            std::cout << "Rating: " << randomNeighbor.rating << std::endl;
+            currentStop = stop;
         }
-        stop--;
+        currentStop--;
     }
     return currentSolution;
 }
 
 // Algorytm wspinaczkowy deterministyczny, wybór najlepszego sąsiada
 Nonogram solve_hillClimbing_deterministic(Vector2d hints, int stop) {
-    Nonogram currentSolution = generate_randomSolution(hints);
-    currentSolution.rating = rateNonogramBasingOnHints(currentSolution, hints);
+    Nonogram currentSolution = generate_randomSolution_rateIt(hints);
 
-    while(stop > 0 && currentSolution.rating < 0) {
+    int currentStop = stop;
+    while(currentStop > 0 && currentSolution.rating < 0) {
         std::vector<Nonogram> allNeighbors = generate_allNeighbors(currentSolution);
 
         for (auto n : allNeighbors) {
             n.rating = rateNonogramBasingOnHints(n, hints);
             if (n.rating > currentSolution.rating) {
                 currentSolution = n;
-//                std::cout << std::endl;
-//                printVector(currentSolution.board);
-//                std::cout << "Rating: " << currentSolution.rating << std::endl;
+                currentStop = stop;
             }
         }
-        stop--;
+        currentStop--;
     }
     return currentSolution;
 }
+
+Nonogram solve_tabu(Vector2d hints, int stop, int tabuSize) {
+    Nonogram currentSolution = generate_randomSolution_rateIt(hints);
+    Nonogram bestSolution = currentSolution;
+
+    std::list<Nonogram> tabuList;
+    std::list<Nonogram> history;
+
+    int currentStop = stop;
+    while(currentStop > 0 && currentSolution.rating < 0) {
+        std::vector<Nonogram> allNeighbors = generate_allNeighbors(currentSolution);
+        Nonogram bestNeighbor;
+
+        for (auto n : allNeighbors) {
+            if (isInList(n, tabuList)) {
+                std::cout << "Continue" << std::endl;
+                continue; // Nie chcemy rozwiązań, które są na liście tabu
+            }
+            std::cout << "Not in tabu" << std::endl;
+            n.rating = rateNonogramBasingOnHints(n, hints);
+            if (n.rating > bestSolution.rating) {
+                bestNeighbor = n;
+            }
+        }
+        if (bestNeighbor.rating > bestSolution.rating) {
+            bestSolution = bestNeighbor;
+        }
+
+        // Cofanie
+//        if (bestNeighbor.rating <= currentSolution.rating) {
+//            currentSolution = history.back();
+//            history.pop_back();
+//        } else {
+//            currentSolution = bestNeighbor;
+//            history.push_back(currentSolution);
+//        }
+
+    // Dodanie rozwiązania do tabu
+        tabuList.push_back(bestSolution);
+        if (tabuList.size() > tabuSize) {
+            tabuList.pop_front(); // Usuwamy jak przekracza rozmiar listy
+        }
+        currentStop--;
+    }
+    return bestSolution;
+}
+
 
 
 void test1() {
@@ -284,14 +364,14 @@ void test3() {
 }
 void test_hillClimbRandom() {
     Vector2d hints = getHints();
-    Nonogram solution = solve_hillClimbing_random(hints, 100);
-    std::cout << std::endl << "Best found solution: " << solution.rating << std::endl;
+    Nonogram solution = solve_hillClimbing_random(hints, 1000);
     printVector(solution.board);
+    std::cout << std::endl << "Best found solution: " << solution.rating << std::endl;
 }
 
 void test_hillClimbDeterministic1() {
     Vector2d hints = getHints();
-    Nonogram nonogram = generate_randomSolution(hints);
+    Nonogram nonogram = generate_randomSolution_rateIt(hints);
     std::vector<Nonogram> nonograms = generate_allNeighbors(nonogram);
 
     std::cout << "Pattern" << std::endl;
@@ -304,19 +384,97 @@ void test_hillClimbDeterministic1() {
 //    Nonogram solution = solve_hillClimbing_deterministic(hints, 100);
 }
 
-void test_hillClimbDeterministic2() {
-    Nonogram nonogram = solve_hillClimbing_deterministic(getHints(), 100);
+Vector2d test_hillClimbDeterministic2() {
+    Vector2d hints = getHints();
+    Nonogram nonogram = solve_hillClimbing_deterministic(hints, 1000);
     printVector(nonogram.board);
+    std::cout << "Rating: " << nonogram.rating << std::endl;
+
+    return hints;
+}
+
+void test_biggerNonogram() {
+   Nonogram nonogram = generate_randomNonogram(50,10);
+    printVector(nonogram.board);
+//   Nonogram zero = generate_zeroNonogram(12,10);
+
+   Vector2d hints = readHintsFromBoard(nonogram);
+   std::cout << "X: " << hints.x.size() << std::endl;
+   printVector(hints.x);
+   std::cout << "Koniec" << std::endl;
+
+   std::cout << "Y: " << hints.y.size() << std::endl;
+   printVector(hints.y);
+   std::cout << "Koniec" << std::endl;
+
+//   zero.rating = rateNonogramBasingOnHints(zero, hints);
+
+//   Nonogram nonogram1 = solve_hillClimbing_random(hints, 100);
+//   Nonogram nonogram1 = solve_hillClimbing_deterministic(hints, 100);
+//   printVector(nonogram1.board);
+//   std::cout << "Rating: " << nonogram1.rating << std::endl;
+//   std::cout << "Zero: " << zero.rating << std::endl;
+}
+
+void test5() {
+    Nonogram nonogram = generate_randomNonogram(5,10);
+    Nonogram nonogram1 = generate_randomNonogram(5,10);
+    Vector2d hints = readHintsFromBoard(nonogram);
+//    Nonogram solution = solve_hillClimbing_random(hints, 10);
+    printVector(nonogram.board);
+    printVector(hints.x);
+    std::cout << std::endl;
+    printVector(hints.y);
+
+    nonogram.rating = rateNonogramBasingOnHints(nonogram1, hints);
     std::cout << "Rating: " << nonogram.rating << std::endl;
 }
 
+void test6() {
+    Nonogram answer = generate_puzzleManually();
+    Nonogram solution = solve_fullReview(getHints());
+
+//    printVector(answer.board);
+//    compareNonograms(answer, solution);
+
+    printVector(solution.board);
+}
+
+void test_tabu() {
+    Nonogram nonogram = solve_tabu(getHints(), 100, 100);
+    printVector(nonogram.board);
+    nonogram.printRating();
+}
+
+void test_comparing() {
+    Nonogram nonogram1 = generate_puzzleManually();
+    Nonogram nonogram2 = nonogram1;
+    std::list<Nonogram> list;
+    list.push_back(nonogram2);
+    if(nonogram1.board == nonogram2.board) {
+        std::cout << "yes";
+    }
+    for (auto n : list) {
+        if(isInList(n, list)) {
+            std::cout << "x2yes";
+        }
+    }
+}
 int main() {
 //    test1();
 //    test2();
 //    test3();
 //    test_hillClimbRandom();
 //    test_hillClimbDeterministic1();
-    test_hillClimbDeterministic2();
+//    test_hillClimbDeterministic2();
+//    test_biggerNonogram();
+//    test5();
+//    test6();
+//    test_tabu();
+//test_comparing();
+
+
 
     return 0;
+
 }
