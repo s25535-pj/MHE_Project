@@ -239,6 +239,7 @@ Nonogram solve_fullReview(const Vector2d& hints) {
         }
     }
     std::cout << "You should never see this!";
+    return fake;
 }
 
 // Algorytm wspinaczkowy z losowym sąsiadem
@@ -280,6 +281,8 @@ Nonogram solve_hillClimbing_deterministic(Vector2d hints, int stop) {
 Nonogram solve_tabu(Vector2d hints, int stop, int tabuSize) {
     Nonogram currentSolution = generate_randomSolution_rateIt(hints);
     Nonogram bestSolution = currentSolution;
+    std::cout << "Starting pont, Rating: " << bestSolution.rating << std::endl;
+    printVector(bestSolution.board);
 
     std::list<Nonogram> tabuList;
     std::list<Nonogram> history;
@@ -287,34 +290,48 @@ Nonogram solve_tabu(Vector2d hints, int stop, int tabuSize) {
     int currentStop = stop;
     while(currentStop > 0 && currentSolution.rating < 0) {
         std::vector<Nonogram> allNeighbors = generate_allNeighbors(currentSolution);
-        Nonogram bestNeighbor;
+        Nonogram bestNeighbor = bestSolution;
 
         for (auto n : allNeighbors) {
             if (isInList(n, tabuList)) {
-                std::cout << "Continue" << std::endl;
+//                printVector(n.board);
+//                std::cout << std::endl;
+//                std::cout << "Continue" << std::endl;
                 continue; // Nie chcemy rozwiązań, które są na liście tabu
             }
-            std::cout << "Not in tabu" << std::endl;
+//            std::cout << "Not in tabu" << std::endl;
             n.rating = rateNonogramBasingOnHints(n, hints);
-            if (n.rating > bestSolution.rating) {
+            if (n.rating > bestNeighbor.rating) {
+//                std::cout << "Yes" << std::endl;
                 bestNeighbor = n;
             }
         }
+
         if (bestNeighbor.rating > bestSolution.rating) {
             bestSolution = bestNeighbor;
+//            std::cout << "Found better solution" << std::endl;
+//            currentStop = stop;
         }
 
         // Cofanie
-//        if (bestNeighbor.rating <= currentSolution.rating) {
-//            currentSolution = history.back();
-//            history.pop_back();
+        // Jeżeli obecny najlepszy sąsiad jest gorszy od obecnego rozwiązania, cofnij
+        if (bestNeighbor.rating <= currentSolution.rating && !history.empty()) {
+            currentSolution = history.back();
+            history.pop_back();
+        } else {
+            // Jeżeli lepszy to ustaw i dodaj do historii
+            currentSolution = bestNeighbor;
+            history.push_back(currentSolution);
+        }
+//    currentSolution = bestNeighbor;
+    // Dodanie rozwiązanie do tabu
+        if (!isInList(bestSolution, tabuList)) {
+            tabuList.push_back(currentSolution);
+//            std::cout << "Adding to taboo list\n";
+        }
 //        } else {
-//            currentSolution = bestNeighbor;
-//            history.push_back(currentSolution);
+//            std::cout << "Not added to taboo list\n";
 //        }
-
-    // Dodanie rozwiązania do tabu
-        tabuList.push_back(bestSolution);
         if (tabuList.size() > tabuSize) {
             tabuList.pop_front(); // Usuwamy jak przekracza rozmiar listy
         }
@@ -398,7 +415,7 @@ void test_biggerNonogram() {
     printVector(nonogram.board);
 //   Nonogram zero = generate_zeroNonogram(12,10);
 
-   Vector2d hints = readHintsFromBoard(nonogram);
+   Vector2d hints = generate_hintsFromNonogram(nonogram);
    std::cout << "X: " << hints.x.size() << std::endl;
    printVector(hints.x);
    std::cout << "Koniec" << std::endl;
@@ -419,7 +436,7 @@ void test_biggerNonogram() {
 void test5() {
     Nonogram nonogram = generate_randomNonogram(5,10);
     Nonogram nonogram1 = generate_randomNonogram(5,10);
-    Vector2d hints = readHintsFromBoard(nonogram);
+    Vector2d hints = generate_hintsFromNonogram(nonogram);
 //    Nonogram solution = solve_hillClimbing_random(hints, 10);
     printVector(nonogram.board);
     printVector(hints.x);
@@ -441,9 +458,27 @@ void test6() {
 }
 
 void test_tabu() {
-    Nonogram nonogram = solve_tabu(getHints(), 100, 100);
+    Nonogram nonogram = solve_tabu(getHints(), 500, 100000);
     printVector(nonogram.board);
     nonogram.printRating();
+}
+
+void test_tabu_big() {
+    Nonogram input = generate_randomNonogram(10,5);
+    Vector2d hints = generate_hintsFromNonogram(input);
+
+    Nonogram nonogram = solve_tabu(hints, 500, 100);
+    std::cout << "\n";
+
+    std::cout << "Input\n";
+    input.printBoard();
+    input.printRating();
+    std::cout << "Proposed Solution\n";
+    nonogram.printBoard();
+    nonogram.printRating();
+
+    std::cout << "Worst rating: " << rateNonogramBasingOnHints(generate_zeroNonogram(10,5), hints) << std::endl;
+
 }
 
 void test_comparing() {
@@ -471,6 +506,7 @@ int main() {
 //    test5();
 //    test6();
 //    test_tabu();
+    test_tabu_big();
 //test_comparing();
 
 

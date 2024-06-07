@@ -17,6 +17,16 @@ public:
         std::cout << "Rating: " << rating << std::endl;
     }
 
+    // Wydrukuj nonogram
+    void printBoard() {
+        for (const auto& n : board) {
+            for (int value : n) {
+                std::cout << value << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
+
 //    bool operator==(const Nonogram& other) const {
 //        return board == other.board;
 //    }
@@ -74,7 +84,7 @@ void printVector(std::vector<std::vector<int>> vector) {
 }
 
 // Zaczytaj nonogram do zadania
-Vector2d readHintsFromBoard(Nonogram nonogram) {
+Vector2d generate_hintsFromNonogram(Nonogram nonogram) {
     Vector2d hints;
     std::vector<int> tmp;
     int blockLength = 0;
@@ -130,16 +140,16 @@ void compareNonograms(Nonogram pattern, Nonogram compared) {
         for (int j = 0; j < compared.board[i].size(); j++) {
             if (compared.board[i][j] != pattern.board[i][j]) {
                 if (compared.board[i][j] != 0) {
-                    std::cout << "\033[1;31m" << "#" << " ";
+                    std::cout << "\033[1;31m" << "1" << " ";
                 } else {
-                    std::cout << "\033[1;31m" << "." << " ";
+                    std::cout << "\033[1;31m" << "0" << " ";
                 }
 
             } else {
                 if (compared.board[i][j] != 0) {
-                    std::cout << "\033[0m" << "#" << " ";
+                    std::cout << "\033[0m" << "1" << " ";
                 } else {
-                    std::cout << "\033[0m" << "." << " ";
+                    std::cout << "\033[0m" << "0" << " ";
                 }
             }
         }
