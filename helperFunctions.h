@@ -27,6 +27,19 @@ public:
         }
     }
 
+    std::string boardToString() {
+        std::string string;
+        for (const auto& n : board) {
+            for (int value : n) {
+                string.append(std::to_string(value));
+                string.append(" ");
+            }
+            string.append("\n");
+        }
+//        std::cout << string;
+        return string;
+    }
+
 //    bool operator==(const Nonogram& other) const {
 //        return board == other.board;
 //    }
@@ -37,16 +50,8 @@ struct Vector2d {
     std::vector<std::vector<int>> x;
     std::vector<std::vector<int>> y;
 
-    int sizeX() {
-        return (int)x.size();
-    }
-
-    int sizeY() {
-        return (int)y.size();
-    }
-
     // Zwróć sumę zamalowanych pól w wierszu o danym indeksie
-    int getXRowSum(int index) {
+    int getXRowSum(int index) const {
         int sum = 0;
         for (int j = 0; j < x[index].size(); j++) {
             sum += x[index][j];
@@ -55,7 +60,7 @@ struct Vector2d {
     }
 
     // Zwróć sumę zamalowanych pól w kolumnie o danym indeksie
-    int getYRowSum(int index) {
+    int getYRowSum(int index) const {
         int sum = 0;
         for (int j = 0; j < y[index].size(); j++) {
             sum += y[index][j];
@@ -164,7 +169,11 @@ bool numberIsInVector(int number, std::vector<int> vector) {
     return false;
 }
 
-bool comparisonFunction(Nonogram a, Nonogram& b) {
+bool comparisonFunctionMore(Nonogram& a, Nonogram& b) {
+    return a.rating > b.rating;
+}
+
+bool comparisonFunctionLess(Nonogram& a, Nonogram& b) {
     return a.rating < b.rating;
 }
 
@@ -239,6 +248,45 @@ bool isInList(Nonogram nonogram, std::list<Nonogram> list) {
         }
     }
     return false;
+}
+
+std::vector<std::vector<int>> readSection(std::ifstream &inputFile) {
+    std::vector<std::vector<int>> vector;
+    std::string line;
+
+    while (std::getline(inputFile, line)) {
+        if (line == "columns") {
+            break;
+        }
+        std::istringstream lineStream(line);
+        std::vector<int> row;
+        int number;
+
+        while (lineStream >> number) {
+            row.push_back(number);
+        }
+
+        vector.push_back(row);
+    }
+    return vector;
+}
+Vector2d readFile(std::string filePath) {
+    std::ifstream inputFile(filePath);
+    if (!inputFile) {
+        std::cout << "Failed to open the input file" << std::endl;
+        exit(1);
+    }
+
+    Vector2d hints;
+    std::string line;
+
+    while (std::getline(inputFile, line)) {
+        hints.x = readSection(inputFile);
+        hints.y = readSection(inputFile);
+    }
+
+    inputFile.close();
+    return hints;
 }
 
 #endif //PROJECT2_HELPERFUNCTIONS_H
