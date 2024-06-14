@@ -21,6 +21,7 @@ int rateNonogramBasingOnHints(const Nonogram& nonogram, const Vector2d& hints) {
     for (int i = 0; i < nonogram.board.size(); i++) {
         for (int j = 0; j < nonogram.board[i].size(); j++) {
             if (nonogram.board[i][j] == 1) {
+                // zlicza długość klocków i ile jest pol zamalowanych
                 painted++;
                 blockLength++;
             } else {
@@ -425,17 +426,8 @@ Nonogram solve_geneticAlgorithm(Vector2d hints, int stop, int populationSize, in
 
 //###################################################################################################
 
-void test() {
-    Vector2d hints = readFile("C:/Users/oem/Desktop/Studia/MHE/MHE_Project/10x10.txt");
-    Nonogram nonogram = solve_geneticAlgorithm(hints,1000,100,5,100,0,1);
-    nonogram.printBoard();
-    nonogram.printRating();
-}
 
-
-int main(int argc, char **argv) {
-
-//    test();
+void runProgram(int argc, char **argv) {
     std::vector<std::string> args(argv, argv+argc);
     std::string selected_solver, inputFile;
     int stop, tabu_popultaion, eliteSize, mutationRate, singlePointCrossover, useRowColMutation;
@@ -484,6 +476,36 @@ int main(int argc, char **argv) {
     fileStream.open (solutionFilePath, std::ios_base::app);
     fileStream << std::setw(35) << std::left  << selected_solver << std::endl << "Rating: " << result.rating << std::endl << result.boardToString() << std::endl;
     fileStream.close();
+}
+
+
+void test() {
+    Vector2d hints = readFile("C:/Users/oem/Desktop/Studia/MHE/MHE_Project/10x10.txt");
+    Nonogram nonogram = solve_geneticAlgorithm(hints,1000,100,5,100,0,1);
+    nonogram.printBoard();
+    nonogram.printRating();
+}
+
+void test2() {
+    Vector2d hints = readFile("C:/Users/oem/Desktop/Studia/MHE/MHE_Project/10x10.txt");
+    Nonogram parent1 = generate_randomSolution_rateIt(hints);
+    Nonogram parent2 = generate_randomSolution_rateIt(hints);
+
+    Nonogram child = crossover_twoPoint(parent1, parent2);
+
+    child.printBoard();
+    std::cout << std::endl;
+    compareNonograms(child, parent1);
+    std::cout << std::endl;
+    compareNonograms(child, parent2);
+}
+
+int main(int argc, char **argv) {
+
+    test2();
+//    runProgram(argc, argv);
+
+
 
     return 0;
 
