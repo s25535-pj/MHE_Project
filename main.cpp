@@ -231,7 +231,7 @@ Nonogram solve_hillClimbing_deterministic(const Vector2d& hints, int stop) {
     return currentSolution;
 }
 
-// Algorytm tabu z cofaniem
+// Algorytm tabu
 Nonogram solve_tabu(const Vector2d& hints, int stop, int tabuSize) {
     Nonogram currentSolution = generate_randomSolution_rateIt(hints);
     Nonogram bestSolution = currentSolution;
@@ -261,19 +261,22 @@ Nonogram solve_tabu(const Vector2d& hints, int stop, int tabuSize) {
         // Podmień najlepszego sąsiada z najlepszym rozwiązaniem jakie do tej pory się trafiło jeśli jest lepszy
         if (bestNeighbor.rating > bestSolution.rating) {
             bestSolution = bestNeighbor;
-            currentStop = stop;
+//            currentStop = stop;
         }
 
+        // Najlepszy sąsiad
+        currentSolution = bestNeighbor;
+        // cofany jak nie mamy lepszego rozwiazania
         // Cofanie
         // Jeżeli obecny najlepszy sąsiad jest gorszy od rozwiązania z poprzedniej iteracji, cofnij
-        if (bestNeighbor.rating <= currentSolution.rating && !history.empty()) {
-            currentSolution = history.back();
-            history.pop_back();
-        } else {
-            // Jeżeli lepszy to ustaw i dodaj do historii
-            currentSolution = bestNeighbor;
-            history.push_back(currentSolution);
-        }
+//        if (bestNeighbor.rating <= currentSolution.rating && !history.empty()) {
+//            currentSolution = history.back();
+//            history.pop_back();
+//        } else {
+//            // Jeżeli lepszy to ustaw i dodaj do historii
+//            currentSolution = bestNeighbor;
+//            history.push_back(currentSolution);
+//        }
 
         // Dodanie rozwiązanie do tabu jeśli do tej pory nie było
         if (!isInList(bestSolution, tabuList)) {
@@ -300,7 +303,7 @@ void ratePopulation(std::vector<Nonogram>& population, const Vector2d& hints) {
 }
 
 // Wyznacz elitę, populacja musi być posortowana że najlepsze są na pierwszych indexach
-std::vector<Nonogram> selection(std::vector<Nonogram>& population, int elite_size) {
+std::vector<Nonogram> save_elite(std::vector<Nonogram>& population, int elite_size) {
     std::vector<Nonogram> elite(population.begin(), population.begin() + elite_size);
     return elite;
 }
@@ -328,6 +331,29 @@ Nonogram crossover_twoPoint(Nonogram& parent1, Nonogram& parent2) {
 
     for (int i = crossover_point1; i < crossover_point2; i++) {
         child.board[i] = parent2.board[i];
+    }
+    return child;
+}
+
+// Krzyżowanie (wklejanie części nonogramu od do, działa na wiersze) - metoda dwupunktowa
+Nonogram Acrossover_twoPoint(Nonogram& parent1, Nonogram& parent2) {
+    Nonogram child = parent1;
+    std::uniform_int_distribution<int> distx(0, (int)parent1.board.size() - 1);
+    std::uniform_int_distribution<int> disty(0, (int)parent1.board[0].size() - 1);
+    int crossover_point1x = distx(randomGenerator);
+    int crossover_point1y = disty(randomGenerator);
+
+    int crossover_point2x = distx(randomGenerator);
+    int crossover_point2y = disty(randomGenerator);
+
+    if (crossover_point1x > crossover_point2x) std::swap(crossover_point1x, crossover_point2x);
+    if (crossover_point1y > crossover_point2y) std::swap(crossover_point1y, crossover_point2y);
+
+    for (int x = crossover_point1x; x < crossover_point2x; x++) {
+        for (int y = crossover_point1y; y < crossover_point2y; y++) {
+            child.board[x][y] = parent2.board[x][y];
+            std::cout << "Moving: " << x << " : " << y << std::endl;
+        }
     }
     return child;
 }
@@ -364,9 +390,41 @@ void mutation_flipColumn(Nonogram& nonogram) {
     }
 }
 
+bool isStillRunning(bool doUntilSolutionFound, int bestRating, int generation, int stop) {
+    // Jesli szukamy do bolu i best rating nie jest 0 lecimy dalej
+    if (doUntilSolutionFound && bestRating == 0) {
+        return false;
+    }
+
+    // Jeśli nie szukamy do bólu i generacja przekroczyła stop
+    if (!doUntilSolutionFound && generation > stop) {
+        return false;
+    }
+    else return true;
+}
+
+// Selekcja
+std::vector<Nonogram> selectedParents(std::vector<Nonogram> population) {
+    std::uniform_int_distribution<int> dist(0, (int)population.size() - 1);
+    std::vector<Nonogram> parents;
+
+    // Chcemy dwóch rodziców
+    for (int i = 0; i < 2; i++) {
+        // wybieramy losowo wojowników
+        Nonogram warrior1 = population[dist(randomGenerator)];
+        Nonogram warrior2 = population[dist(randomGenerator)];
+
+        // Dodajemy wygranego jako rodzica
+        if (warrior1.rating > warrior2.rating) parents.push_back(warrior1);
+        else parents.push_back(warrior2);
+    }
+
+    return parents;
+}
+
 // Algorytm genetyczny
-Nonogram solve_geneticAlgorithm(Vector2d hints, int stop, int populationSize, int eliteSize, int mutationRate,
-                           bool singlePointCrossover, bool useRowColMutation) {
+Nonogram solve_geneticAlgorithm(const Vector2d& hints, int stop, int populationSize, int eliteSize, double mutationRate,
+                           bool singlePointCrossover, bool useRowColMutation, bool doUntilSolutionFound) {
 
     // Wygeneruj losowe nonogramy i dodaj do populacji
     std::vector<Nonogram> population;
@@ -376,56 +434,63 @@ Nonogram solve_geneticAlgorithm(Vector2d hints, int stop, int populationSize, in
 
     int generation = 0;
     int bestRating = 1;
+
     // Szukaj dopóki nie znajdziesz lub przelecisz wyznaczoną liczbę pokoleń
-    while(generation < stop || bestRating == 0) {
+    while(isStillRunning(doUntilSolutionFound, bestRating, generation, stop)) {
 
         // Posortuj po rating tak że najlepszy jest pierwszy
         std::sort(population.begin(), population.end(), comparisonFunctionMore);
 
-        // Wybierz elitę, pierwsze ileś z najlepszym rating, dlatego sortujemy
-        std::vector<Nonogram> elite = selection(population, eliteSize);
+        // Wyrównaj rozmiar populacji
+        while(population.size() > populationSize) population.pop_back();
 
-        // Elita się rozmnaża poprzez krzyżowanie, losowy wybór rodziców z elity, mają się rozmnożyć do rozmiaru populacji
-        std::uniform_int_distribution<int> dist(0, eliteSize - 1);
-        while (elite.size() < populationSize) {
-            Nonogram parent1 = population[dist(randomGenerator)];
-            Nonogram parent2 = population[dist(randomGenerator)];
-            Nonogram child;
+        // Wybierz elitę, pierwsze ileś z najlepszym rating, dlatego sortujemy
+        std::vector<Nonogram> elite = save_elite(population, eliteSize);
+
+        // Wybór silnijeszego rodzica z areny i rozmnażanie ich
+        std::vector<Nonogram> childrenPopulation;
+        while (childrenPopulation.size() < populationSize) {
+            std::vector<Nonogram> parents = selectedParents(population);
 
             // Czy uzywamy sinble point crossover czy two point crossover
-            child = singlePointCrossover ? crossover_singlePoint(parent1, parent2) : crossover_twoPoint(parent1, parent2);
-//            if (singlePointCrossover) {
-//                 child = crossover_singlePoint(parent1, parent2);
-//            } else {
-//                 child = crossover_twoPoint(parent1, parent2);
-//            }
-
-            elite.push_back(child);
+            if (singlePointCrossover) {
+                childrenPopulation.push_back(crossover_singlePoint(parents[0], parents[1]));
+            } else {
+                childrenPopulation.push_back(crossover_twoPoint(parents[0], parents[1]));
+            }
         }
 
         // Losowa mutacja, która może nie musi zajść, zmiana jednego pola, lub zmiana wiersza/kolumny
-        for (auto& nonogram : elite) {
-            std::uniform_int_distribution<int> dist2(1, 100/mutationRate);
-            if (dist2(randomGenerator) == 1) {
+        for (auto& child : childrenPopulation) {
+//            std::uniform_int_distribution<int> dist(1, 100/mutationRate);
+            std::uniform_real_distribution<double> dist(0, 1.0);
+            if (dist(randomGenerator) < mutationRate) {
                 if (useRowColMutation) {
-                    mutation_flip(nonogram);
+                    mutation_flip(child);
                 } else {
                     // Szansa 50/50 że wiersz lub kolumna
                     std::uniform_int_distribution<int> dist3(0, 1);
                     if (dist3(randomGenerator) == 0)
-                        mutation_flipRow(nonogram);
+                        mutation_flipRow(child);
                     else {
-                        mutation_flipColumn(nonogram);
+                        mutation_flipColumn(child);
                     }
                 }
             }
         }
 
-        // Rozmnożona elita to nowa populacja
-        population = elite;
+        // Dodajemu elitę do nowej populacji dzieci
+        for (const auto& e : elite) {
+            childrenPopulation.push_back(e);
+        }
+//        childrenPopulation.insert(population.end(), elite.begin(), elite.end());
+
+        // Przestawiamy populację na wersję dzieci
+        population = childrenPopulation;
 
         // Oceń populację, populacja się zmienia więc trzeba ją oceniać po każdej iteracji
         ratePopulation(population, hints);
+
         // Jesli best rating = 0 pętla się zakończy
         bestRating = (*std::max_element(population.begin(), population.end(), comparisonFunctionLess)).rating;
         generation++;
@@ -441,7 +506,8 @@ Nonogram solve_geneticAlgorithm(Vector2d hints, int stop, int populationSize, in
 void runProgram(int argc, char **argv) {
     std::vector<std::string> args(argv, argv+argc);
     std::string selected_solver, inputFile;
-    int stop, tabu_popultaion, eliteSize, mutationRate, singlePointCrossover, useRowColMutation;
+    int stop, tabu_popultaion, eliteSize, singlePointCrossover, useRowColMutation, doUntilSolutionFound;
+    double mutationRate;
 
     // Musi być odpowiednia ilość argumentów albo się wywali
     inputFile = args[1];
@@ -449,9 +515,10 @@ void runProgram(int argc, char **argv) {
     stop = stoi(args[3]);
     tabu_popultaion = stoi(args[4]);
     eliteSize = stoi(args[5]);
-    mutationRate = stoi(args[6]);
+    mutationRate = stod(args[6]);
     singlePointCrossover = stoi(args[7]);
     useRowColMutation = stoi(args[8]);
+    doUntilSolutionFound = stoi(args[9]);
 
     Vector2d hints = readFile(inputFile);
 
@@ -463,7 +530,7 @@ void runProgram(int argc, char **argv) {
     solvers["solve_hillClimbing_random"] = [&](auto hints){return solve_hillClimbing_random(hints, stop);};
     solvers["solve_hillClimbing_deterministic"] = [&](auto hints){return solve_hillClimbing_deterministic(hints, stop);};
     solvers["solve_tabu"] = [&](auto hints){return solve_tabu(hints, stop, tabu_popultaion);};
-    solvers["solve_geneticAlgorithm"] = [&](auto hints){return solve_geneticAlgorithm(hints, stop, tabu_popultaion,eliteSize, mutationRate, singlePointCrossover, useRowColMutation);};
+    solvers["solve_geneticAlgorithm"] = [&](auto hints){return solve_geneticAlgorithm(hints, stop, tabu_popultaion,eliteSize, mutationRate, singlePointCrossover, useRowColMutation, doUntilSolutionFound);};
 
     // Liczenie czasu
     auto start_time = std::chrono::system_clock::now();
@@ -492,13 +559,13 @@ void runProgram(int argc, char **argv) {
 
 void test_Genetic() {
     Vector2d hints = readFile("C:/Users/Art/Desktop/Studia/MHE/MHE_Project/10x10.txt");
-    Nonogram nonogram = solve_geneticAlgorithm(hints,1000,100,10,50,1,1);
+    Nonogram nonogram = solve_geneticAlgorithm(hints,1000,100,10,0.1,1,1, 0);
     nonogram.printBoard();
     nonogram.printRating();
 }
 
 void test_crossover() {
-    Vector2d hints = readFile("C:/Users/oem/Desktop/Studia/MHE/MHE_Project/10x10.txt");
+    Vector2d hints = readFile("C:/Users/Art/Desktop/Studia/MHE/MHE_Project/5x5.txt");
     Nonogram parent1 = generate_randomSolution_rateIt(hints);
     Nonogram parent2 = generate_randomSolution_rateIt(hints);
 
@@ -512,7 +579,7 @@ void test_crossover() {
 }
 
 void test_mutation() {
-    Vector2d hints = readFile("C:/Users/Art/Desktop/Studia/MHE/MHE_Project/10x10.txt");
+    Vector2d hints = readFile("C:/Users/Art/Desktop/Studia/MHE/MHE_Project/5x5.txt");
     Nonogram afterMutation = generate_randomSolution_rateIt(hints);
     Nonogram beforeMutation = afterMutation;
 
@@ -573,15 +640,30 @@ void test() {
     zero.printRating();
 }
 
+void test_betterCrossover() {
+    Vector2d hints = readFile("C:/Users/Art/Desktop/Studia/MHE/MHE_Project/5x5.txt");
+    Nonogram parent1 = generate_randomSolution_rateIt(hints);
+    Nonogram parent2 = generate_randomSolution_rateIt(hints);
 
+    Nonogram child = crossover_twoPoint(parent1, parent2);
+    std::cout << "Parent1\n";
+    parent1.printBoard();
+    std::cout << "Parent2\n";
+    parent2.printBoard();
+    std::cout << "child\n";
+    compareNonograms(parent1, child);
+
+//    crossover_twoPoin
+}
 
 int main(int argc, char **argv) {
 
 //    test_crossover();
 //    test_mutation();
-//    runProgram(argc, argv);
-//test_Genetic ();
-test();
+    runProgram(argc, argv);
+//    test_Genetic();
+//    test();
+//    test_betterCrossover();
     return 0;
 
 }
