@@ -177,63 +177,33 @@ bool comparisonFunctionLess(Nonogram& a, Nonogram& b) {
     return a.rating < b.rating;
 }
 
-std::vector<Nonogram> generateAllNonograms(const Vector2d& hints) {
-    std::vector<Nonogram> nonogramList;
-    int x = (int)hints.x.size();
-    int y = (int)hints.y.size();
-
-    auto totalCombinations = (unsigned long long)pow(2,x*y);
-
-    // nonogram 5x5 = 2^25 = 33,554,443 kombinacji.
-    std::cout << "Generating..." << std::endl;
-    for (unsigned long long combination = 0; combination < totalCombinations; combination++) {
-        std::vector<std::vector<int>> currentBoard(x, std::vector<int>(y)); // rozmiar wektora pośredniego
-        unsigned long long currentCombination = combination;
-
-        // Zaczytywanie liczb do board
-        for (int i = 0; i < x * y; i++) {
-            int row = i / x; // int zaokrągla w dół
-            int col = i % y;
-
-            currentBoard[row][col] = (int)currentCombination & 1; // przepisz skrajnie prawy bit do komórki nonogramu.
-            currentCombination >>= 1; // przesuń wszytkie bity w prawo.
-        }
-        Nonogram nonogram;
-        nonogram.board = currentBoard;
-        nonogramList.push_back(nonogram);
-    }
-    return nonogramList;
-}
-
 // Wygeneruj losową planszę gry o zadanym rozmiarze
-
-
 Nonogram generate_randomNonogram(int sizeX, int sizeY) {
     Nonogram nonogram;
     // Jak nie określałem rozmiaru wektora to miałem SEG faulty
-    std::vector<std::vector<int>> puzzle(sizeX, std::vector<int>(sizeY));
+    std::vector<std::vector<int>> board(sizeX, std::vector<int>(sizeY));
     std::uniform_int_distribution<int> value(0,1);
 
     for (int i = 0; i < sizeX; i++) {
         for (int j = 0; j < sizeY; j++) {
-            puzzle[i][j] = value(randomGenerator);
+            board[i][j] = value(randomGenerator);
         }
     }
-    nonogram.board = puzzle;
+    nonogram.board = board;
     return nonogram;
 }
 
 Nonogram generate_zeroNonogram(int sizeX, int sizeY) {
     Nonogram nonogram;
     // Jak nie określałem rozmiaru wektora to miałem SEG faulty
-    std::vector<std::vector<int>> puzzle(sizeX, std::vector<int>(sizeY));
+    std::vector<std::vector<int>> board(sizeX, std::vector<int>(sizeY));
 
     for (int i = 0; i < sizeX; i++) {
         for (int j = 0; j < sizeY; j++) {
-            puzzle[i][j] = 0;
+            board[i][j] = 0;
         }
     }
-    nonogram.board = puzzle;
+    nonogram.board = board;
     return nonogram;
 }
 

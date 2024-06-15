@@ -46,11 +46,11 @@ int rateNonogramBasingOnHints(const Nonogram& nonogram, const Vector2d& hints) {
             }
             for (int k = 0; k < size; k++) {
                 if (tmp[k] != hints.x[i][k]) {
-                    rating -= 1; // - Za każdą złą liczbę na indexie
+                    rating -= 2; // - Za każdą złą liczbę na indexie
                 }
             }
         }
-        rating -= std::abs((int)hints.x[i].size() - (int)tmp.size()) * 2; // - za każdy brak liczby
+        rating -= std::abs((int)hints.x[i].size() - (int)tmp.size()) * 3; // - za każdy brak liczby
         rating -= std::abs((int)hints.getXRowSum(i) - painted) * 1; // - za każde źle zamalowane
 
         blockLength = 0;
@@ -88,13 +88,13 @@ int rateNonogramBasingOnHints(const Nonogram& nonogram, const Vector2d& hints) {
 
             for (int k = 0; k < size; k++) {
                 if (tmp[k] != hints.y[i][k]) {
-                    rating -= 1; // - Za każdą złą liczbę na indexie
+                    rating -= 2; // - Za każdą złą liczbę na indexie
                 }
             }
         }
 
-        rating -= std::abs((int)hints.y[i].size() - (int)tmp.size()) * 2; // - za każdy brak liczby
-        rating -= std::abs((int)hints.getYRowSum(i) - painted); // - za każde źle zamalowane
+        rating -= std::abs((int)hints.y[i].size() - (int)tmp.size()) * 3; // - za każdy brak liczby
+        rating -= std::abs((int)hints.getYRowSum(i) - painted) * 1; // - za każde źle zamalowane
 
         blockLength = 0;
         painted = 0;
@@ -165,8 +165,10 @@ Nonogram solve_fullReview(const Vector2d& hints) {
         // Zaczytywanie liczb do board
         for (int i = 0; i < x; i++) {
             for (int j = 0; j < y; j++) {
-                currentBoard[i][j] = (int)currentCombination & 1; // przepisz skrajnie prawy bit do komórki nonogramu.
-                currentCombination >>= 1; // przesuń wszytkie bity w prawo.
+                // przepisz skrajnie prawy bit do komórki nonogramu.
+                currentBoard[i][j] = (int)currentCombination & 1;
+                // przesuń wszytkie bity w prawo.
+                currentCombination >>= 1;
             }
         }
 
@@ -192,6 +194,7 @@ Nonogram solve_hillClimbing_random(const Vector2d& hints, int stop) {
     while(currentStop > 0 && currentSolution.rating < 0) {
         Nonogram randomNeighbor = generate_randomNeighbor_rateIt(currentSolution, hints);
 
+        // Jeśli sąsiad jest lepszy niż obecne rozwiązanie, podmień.
         if (currentSolution.rating < randomNeighbor.rating) {
             currentSolution = randomNeighbor;
             // Jeżeli jest progres, zresetuj stopa
@@ -205,15 +208,18 @@ Nonogram solve_hillClimbing_random(const Vector2d& hints, int stop) {
 // Algorytm wspinaczkowy deterministyczny, wybór najlepszego sąsiada z wszystkich możliwych
 Nonogram solve_hillClimbing_deterministic(const Vector2d& hints, int stop) {
     Nonogram currentSolution = generate_randomSolution_rateIt(hints);
-
     int currentStop = stop;
+
+    // Jeżeli stop > 0 i nie masz jeszcze rozwiązania
     while(currentStop > 0 && currentSolution.rating < 0) {
-        // Wygeneruj nowych sąsiadów
+        // Wygeneruj listę nowych sąsiadów
         std::vector<Nonogram> allNeighbors = generate_allNeighbors(currentSolution);
 
+        // Dla każdego, oceń
         for (auto &neighbor : allNeighbors) {
             neighbor.rating = rateNonogramBasingOnHints(neighbor, hints);
-            // Wybierz najlepszego
+
+            // Jeśli sąsiad jest lepszy niż obecne rozwiązanie, podmień.
             if (neighbor.rating > currentSolution.rating) {
                 currentSolution = neighbor;
                 // Jeżeli jest progres, zresetuj stopa
@@ -224,6 +230,7 @@ Nonogram solve_hillClimbing_deterministic(const Vector2d& hints, int stop) {
     }
     return currentSolution;
 }
+
 // Algorytm tabu z cofaniem
 Nonogram solve_tabu(const Vector2d& hints, int stop, int tabuSize) {
     Nonogram currentSolution = generate_randomSolution_rateIt(hints);
@@ -245,7 +252,7 @@ Nonogram solve_tabu(const Vector2d& hints, int stop, int tabuSize) {
         for (auto &neighbor : allNeighbors) {
             neighbor.rating = rateNonogramBasingOnHints(neighbor, hints);
 
-            // Nie chcemy rozwiązań, które są na liście tabu, jeśli jest na liście olej iterację
+            // Jeśli nie jest na liście tabu i jest lepszy rating to podmień najlepszego sąsiada
             if (!isInList(neighbor, tabuList) && (neighbor.rating > bestNeighbor.rating)) {
                 bestNeighbor = neighbor;
             }
@@ -298,7 +305,7 @@ std::vector<Nonogram> selection(std::vector<Nonogram>& population, int elite_siz
     return elite;
 }
 
-// Krzyżowanie (wklejanie części nonogramu od do końca) - metoda jednopunktowa
+// Krzyżowanie (wklejanie części nonogramu od do końca, działa na wiersze) - metoda jednopunktowa
 Nonogram crossover_singlePoint(Nonogram& parent1, Nonogram& parent2) {
     Nonogram child = parent1;
     std::uniform_int_distribution<int> dist(0, (int)parent1.board.size() - 1);
@@ -310,7 +317,7 @@ Nonogram crossover_singlePoint(Nonogram& parent1, Nonogram& parent2) {
     return child;
 }
 
-// Krzyżowanie (wklejanie części nonogramu od do) - metoda dwupunktowa
+// Krzyżowanie (wklejanie części nonogramu od do, działa na wiersze) - metoda dwupunktowa
 Nonogram crossover_twoPoint(Nonogram& parent1, Nonogram& parent2) {
     Nonogram child = parent1;
     std::uniform_int_distribution<int> dist(0, (int)parent1.board.size() - 1);
@@ -325,14 +332,13 @@ Nonogram crossover_twoPoint(Nonogram& parent1, Nonogram& parent2) {
     return child;
 }
 
-
-
 // Mutacja - odwróć wartość na jednym polu
 void mutation_flip(Nonogram& nonogram) {
     std::uniform_int_distribution<int> dist(0, (int)nonogram.board.size() - 1);
     int x = dist(randomGenerator);
     int y = dist(randomGenerator);
 
+    // Przestaw wartość na jednym polu
     nonogram.board[x][y] = nonogram.board[x][y] == 0 ? 1 : 0;
 }
 
@@ -341,6 +347,7 @@ void mutation_flipRow(Nonogram& nonogram) {
     std::uniform_int_distribution<int> dist(0, (int)nonogram.board.size() - 1);
     int x = dist(randomGenerator);
 
+    // Przestaw wartości na całym wierszu
     for (int y = 0; y < nonogram.board[x].size(); y++) {
         nonogram.board[x][y] = nonogram.board[x][y] == 0 ? 1 : 0;
     }
@@ -351,6 +358,7 @@ void mutation_flipColumn(Nonogram& nonogram) {
     std::uniform_int_distribution<int> dist(0, (int)nonogram.board[0].size() - 1);
     int y = dist(randomGenerator);
 
+    // Przestaw wartości na całej kolumnie
     for (int x = 0; x < nonogram.board[0].size(); x++) {
         nonogram.board[x][y] = nonogram.board[x][y] == 0 ? 1 : 0;
     }
@@ -384,11 +392,13 @@ Nonogram solve_geneticAlgorithm(Vector2d hints, int stop, int populationSize, in
             Nonogram parent2 = population[dist(randomGenerator)];
             Nonogram child;
 
-            if (singlePointCrossover) {
-                 child = crossover_singlePoint(parent1, parent2);
-            } else {
-                 child = crossover_twoPoint(parent1, parent2);
-            }
+            // Czy uzywamy sinble point crossover czy two point crossover
+            child = singlePointCrossover ? crossover_singlePoint(parent1, parent2) : crossover_twoPoint(parent1, parent2);
+//            if (singlePointCrossover) {
+//                 child = crossover_singlePoint(parent1, parent2);
+//            } else {
+//                 child = crossover_twoPoint(parent1, parent2);
+//            }
 
             elite.push_back(child);
         }
@@ -416,6 +426,7 @@ Nonogram solve_geneticAlgorithm(Vector2d hints, int stop, int populationSize, in
 
         // Oceń populację, populacja się zmienia więc trzeba ją oceniać po każdej iteracji
         ratePopulation(population, hints);
+        // Jesli best rating = 0 pętla się zakończy
         bestRating = (*std::max_element(population.begin(), population.end(), comparisonFunctionLess)).rating;
         generation++;
     }
@@ -479,14 +490,14 @@ void runProgram(int argc, char **argv) {
 }
 
 
-void test() {
-    Vector2d hints = readFile("C:/Users/oem/Desktop/Studia/MHE/MHE_Project/10x10.txt");
-    Nonogram nonogram = solve_geneticAlgorithm(hints,1000,100,5,100,0,1);
+void test_Genetic() {
+    Vector2d hints = readFile("C:/Users/Art/Desktop/Studia/MHE/MHE_Project/10x10.txt");
+    Nonogram nonogram = solve_geneticAlgorithm(hints,1000,100,10,50,1,1);
     nonogram.printBoard();
     nonogram.printRating();
 }
 
-void test2() {
+void test_crossover() {
     Vector2d hints = readFile("C:/Users/oem/Desktop/Studia/MHE/MHE_Project/10x10.txt");
     Nonogram parent1 = generate_randomSolution_rateIt(hints);
     Nonogram parent2 = generate_randomSolution_rateIt(hints);
@@ -500,13 +511,77 @@ void test2() {
     compareNonograms(child, parent2);
 }
 
+void test_mutation() {
+    Vector2d hints = readFile("C:/Users/Art/Desktop/Studia/MHE/MHE_Project/10x10.txt");
+    Nonogram afterMutation = generate_randomSolution_rateIt(hints);
+    Nonogram beforeMutation = afterMutation;
+
+    mutation_flipColumn(afterMutation);
+
+    beforeMutation.printBoard();
+    std::cout << std::endl;
+    compareNonograms(beforeMutation, afterMutation);
+}
+
+std::vector<Nonogram> generate_allNonograms(const Vector2d& hints) {
+    int x = (int) hints.x.size();
+    int y = (int) hints.y.size();
+    std::vector<Nonogram> list;
+
+    // Wszytkie kombinacje, Dla 3x3 to 2^3*3 = 512, ale liczymy od zera to 511 = 1 1111 1111 binarnie
+    auto totalCombinations = (unsigned long long) pow(2, x * y);
+
+    for (unsigned long long combination = 0; combination < totalCombinations; combination++) {
+        std::vector<std::vector<int>> currentBoard(x, std::vector<int>(y)); // rozmiar wektora pośredniego
+        unsigned long long currentCombination = combination;
+
+        // Zaczytywanie liczb do board
+        for (int i = 0; i < x; i++) {
+            for (int j = 0; j < y; j++) {
+                // przepisz skrajnie prawy bit do komórki nonogramu.
+                currentBoard[i][j] = (int) currentCombination & 1;
+                // przesuń wszytkie bity w prawo.
+                currentCombination >>= 1;
+            }
+        }
+
+        // Zrób z tego struct i oceń (zapisz też ocenę) czy przypadkiem to już nie jest rozwiązanie.
+        Nonogram nonogram;
+        nonogram.board = currentBoard;
+        nonogram.rating = rateNonogramBasingOnHints(nonogram, hints);
+        list.push_back(nonogram);
+    }
+    return list;
+}
+
+
+void test() {
+    Vector2d hints = readFile("C:/Users/Art/Desktop/Studia/MHE/MHE_Project/3x3.txt");
+
+    auto nonograms = generate_allNonograms(hints);
+    std::sort(nonograms.begin(), nonograms.end(), comparisonFunctionMore);
+
+    for (int i = 0; i < 10; i++) {
+        nonograms[i].printBoard();
+        nonograms[i].printRating();
+        std::cout << std::endl;
+    }
+
+    Nonogram zero = generate_zeroNonogram((int)hints.x.size(),(int)hints.y.size());
+    zero.rating = rateNonogramBasingOnHints(zero, hints);
+    zero.printBoard();
+    zero.printRating();
+}
+
+
+
 int main(int argc, char **argv) {
 
-    test2();
+//    test_crossover();
+//    test_mutation();
 //    runProgram(argc, argv);
-
-
-
+//test_Genetic ();
+test();
     return 0;
 
 }
